@@ -1,0 +1,7 @@
+spring:
+  application:
+    name: payment-service
+
+  data:
+    mongodb:
+      uri: mongodb://root:example@localhost:27017/payments?authSource=admin
