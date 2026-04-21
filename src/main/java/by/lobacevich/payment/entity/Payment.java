@@ -16,11 +16,11 @@ public class Payment {
     @Id
     private String id;
 
-    @Indexed(unique = true)
-    private String orderId;
+    @Indexed
+    private Long userId;
 
     @Indexed
-    private String userId;
+    private Long orderId;
 
     @Indexed
     private PaymentStatus status;

@@ -1,22 +1,16 @@
 package by.lobacevich.payment.repository;
 
 import by.lobacevich.payment.entity.Payment;
-import org.springframework.data.mongodb.repository.MongoRepository;
+import org.springframework.data.mongodb.repository.ReactiveMongoRepository;
 import org.springframework.stereotype.Repository;
+import reactor.core.publisher.Flux;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
 @Repository
-public interface PaymentRepository extends MongoRepository<Payment, String> {
+public interface PaymentRepository extends ReactiveMongoRepository<Payment, String> {
 
-    List<Payment> findByUserId(String userId);
+    Flux<Payment> findByUserIdAndTimestampBetween(Long userId, LocalDateTime from, LocalDateTime to);
 
-    List<Payment> findByOrderId(String orderId);
-
-    List<Payment> findByStatus(String status);
-
-    List<Payment> findByUserIdAndTimestampBetween(String userId, LocalDateTime from, LocalDateTime to);
-
-    List<Payment> findByTimestampBetween(LocalDateTime from, LocalDateTime to);
+    Flux<Payment> findByTimestampBetween(LocalDateTime from, LocalDateTime to);
 }
