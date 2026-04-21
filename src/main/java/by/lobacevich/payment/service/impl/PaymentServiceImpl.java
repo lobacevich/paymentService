@@ -6,6 +6,8 @@ import by.lobacevich.payment.entity.Payment;
 import by.lobacevich.payment.entity.enums.PaymentStatus;
 import by.lobacevich.payment.mapper.PaymentMapper;
 import by.lobacevich.payment.repository.PaymentRepository;
+import by.lobacevich.payment.repository.TotalResult;
+import by.lobacevich.payment.security.SecurityUtils;
 import by.lobacevich.payment.service.PaymentService;
 import by.lobacevich.payment.webclient.RandomWebClient;
 import lombok.RequiredArgsConstructor;
@@ -32,52 +34,70 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Override
     public Mono<PaymentDtoResponse> create(PaymentDtoRequest dtoRequest) {
-        return randomWebClient.fetchRandomNumber()
-                .flatMap(randomNumber -> {
+        return SecurityUtils.getPrincipalId()
+                .flatMap(userId ->randomWebClient.fetchRandomNumber()
+                .map(randomNumber -> {
                     Payment payment = mapper.dtoToEntity(dtoRequest);
+                    payment.setUserId(userId);
                     payment.setStatus(randomNumber % 2 == 0
                             ? PaymentStatus.SUCCESS
                             : PaymentStatus.FAILED);
                     payment.setTimestamp(LocalDateTime.now());
-                    return repository.save(payment);
+                    return payment;
+                })
+                .flatMap(repository::save)
+                .map(mapper::entityToDto));
+    }
+
+    @Override
+    public Flux<PaymentDtoResponse> getAll(Long userId, Long orderId, PaymentStatus status) {
+
+        return SecurityUtils.isAdmin()
+                .flatMapMany(isAdmin -> {
+                    List<Criteria> criteriaList = new ArrayList<>();
+                    if (orderId != null) {
+                        criteriaList.add(Criteria.where("orderId").is(orderId));
+                    }
+                    if (status != null) {
+                        criteriaList.add(Criteria.where("status").is(status));
+                    }
+                    Query query = new Query();
+                    if (isAdmin) {
+                        if (userId != null) {
+                            criteriaList.add(Criteria.where("userId").is(userId));
+                        }
+                        if (!criteriaList.isEmpty()) {
+                            query.addCriteria(new Criteria().andOperator(criteriaList));
+                        }
+                        return mongoTemplate.find(query, Payment.class);
+                    } else {
+                        return SecurityUtils.getPrincipalId()
+                                .flatMapMany(principalId -> {
+                                    criteriaList.add(Criteria.where("userId").is(principalId));
+                                    query.addCriteria(new Criteria().andOperator(criteriaList));
+                                    return mongoTemplate.find(query, Payment.class);
+                                });
+                    }
                 })
                 .map(mapper::entityToDto);
     }
 
     @Override
-    public Flux<PaymentDtoResponse> getAll(Long userId, Long orderId, PaymentStatus status) {
-        List<Criteria> criteriaList = new ArrayList<>();
-        if (userId != null) {
-            criteriaList.add(Criteria.where("userId").is(userId));
-        }
-        if (orderId != null) {
-            criteriaList.add(Criteria.where("orderId").is(orderId));
-        }
-        if (status != null) {
-            criteriaList.add(Criteria.where("status").is(status));
-        }
-
-        Query query = new Query();
-        if (!criteriaList.isEmpty()) {
-            query.addCriteria(new Criteria().orOperator(criteriaList.toArray(new Criteria[0])));
-        }
-
-        return mongoTemplate.find(query, Payment.class)
-                .map(mapper::entityToDto);
-    }
-
-    @Override
-    public Mono<BigDecimal> getTotalSum(Long userId,
-                                        LocalDateTime from,
-                                        LocalDateTime to) {
-        if (userId == null) {
-            return repository.findByTimestampBetween(from, to)
-                    .map(Payment::getPaymentAmount)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-        } else {
-            return repository.findByUserIdAndTimestampBetween(userId, from, to)
-                    .map(Payment::getPaymentAmount)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-        }
+    public Mono<BigDecimal> getSum(LocalDateTime from,
+                                   LocalDateTime to) {
+        return SecurityUtils.isAdmin()
+                .flatMap(isAdmin ->
+                {
+                    if (isAdmin) {
+                        return repository.sumByTimestampBetween(from, to)
+                                .map(TotalResult::total)
+                                .defaultIfEmpty(BigDecimal.ZERO);
+                    } else {
+                        return SecurityUtils.getPrincipalId()
+                                .flatMap(principalId -> repository.sumByUserIdAndTimestampBetween(principalId, from, to)
+                                        .map(TotalResult::total)
+                                        .defaultIfEmpty(BigDecimal.ZERO));
+                    }
+                });
     }
 }

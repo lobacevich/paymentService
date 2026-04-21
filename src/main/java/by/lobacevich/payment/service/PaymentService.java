@@ -15,7 +15,6 @@ public interface PaymentService {
 
     Flux<PaymentDtoResponse> getAll(Long userId, Long orderId, PaymentStatus status);
 
-    Mono<BigDecimal> getTotalSum(Long userId,
-                                 LocalDateTime from,
-                                 LocalDateTime to);
+    Mono<BigDecimal> getSum(LocalDateTime from,
+                            LocalDateTime to);
 }

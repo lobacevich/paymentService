@@ -41,10 +41,9 @@ public class PaymentController {
 
     @GetMapping("/sum")
     public Mono<BigDecimal> getSum(
-            @RequestParam(required = false) Long userId,
-            @RequestParam(required = false) LocalDateTime from,
-            @RequestParam(required = false) LocalDateTime to
+            @RequestParam(required = false, defaultValue = "1970-01-01T00:00:00") LocalDateTime from,
+            @RequestParam(required = false, defaultValue = "9999-12-31T23:59:59") LocalDateTime to
             ) {
-        return service.getTotalSum(userId, from, to);
+        return service.getSum(from, to);
     }
 }
