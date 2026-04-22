@@ -4,6 +4,7 @@ import by.lobacevich.payment.dto.PaymentDtoRequest;
 import by.lobacevich.payment.dto.PaymentDtoResponse;
 import by.lobacevich.payment.entity.Payment;
 import by.lobacevich.payment.entity.enums.PaymentStatus;
+import by.lobacevich.payment.kafka.producer.PaymentCreatedEventProducer;
 import by.lobacevich.payment.mapper.PaymentMapper;
 import by.lobacevich.payment.repository.PaymentRepository;
 import by.lobacevich.payment.repository.TotalResult;
@@ -31,22 +32,25 @@ public class PaymentServiceImpl implements PaymentService {
     private final PaymentMapper mapper;
     private final RandomWebClient randomWebClient;
     private final ReactiveMongoTemplate mongoTemplate;
+    private final PaymentCreatedEventProducer eventProducer;
 
     @Override
     public Mono<PaymentDtoResponse> create(PaymentDtoRequest dtoRequest) {
         return SecurityUtils.getPrincipalId()
-                .flatMap(userId ->randomWebClient.fetchRandomNumber()
-                .map(randomNumber -> {
-                    Payment payment = mapper.dtoToEntity(dtoRequest);
-                    payment.setUserId(userId);
-                    payment.setStatus(randomNumber % 2 == 0
-                            ? PaymentStatus.SUCCESS
-                            : PaymentStatus.FAILED);
-                    payment.setTimestamp(LocalDateTime.now());
-                    return payment;
-                })
-                .flatMap(repository::save)
-                .map(mapper::entityToDto));
+                .flatMap(userId -> randomWebClient.fetchRandomNumber()
+                        .map(randomNumber -> {
+                            Payment payment = mapper.dtoToEntity(dtoRequest);
+                            payment.setUserId(userId);
+                            payment.setStatus(randomNumber % 2 == 0
+                                    ? PaymentStatus.SUCCESS
+                                    : PaymentStatus.FAILED);
+                            payment.setTimestamp(LocalDateTime.now());
+                            return payment;
+                        })
+                        .flatMap(repository::save)
+                        .doOnSuccess(payment ->
+                                eventProducer.sendPaymentCreatedEvent(mapper.entityToEvent(payment, LocalDateTime.now()))))
+                        .map(mapper::entityToDto);
     }
 
     @Override
