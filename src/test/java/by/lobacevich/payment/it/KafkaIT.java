@@ -30,7 +30,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlMatching;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-public class KafkaIT extends BaseIntegrationTest {
+class KafkaIT extends BaseIntegrationTest {
 
     private static final Long ORDER_ID = 1L;
     private static final Long USER_ID = 1L;
@@ -92,12 +92,12 @@ public class KafkaIT extends BaseIntegrationTest {
                 .exchange()
                 .expectStatus().isOk();
 
-        ConsumerRecord<String, PaymentCreatedEvent> record =
+        ConsumerRecord<String, PaymentCreatedEvent> consumerRecord =
                 KafkaTestUtils.getSingleRecord(consumer, "CREATE_PAYMENT");
 
-        assertNotNull(record.value());
-        assertEquals(ORDER_ID, record.value().orderId());
-        assertEquals(PaymentStatus.SUCCESS.name(), record.value().status());
+        assertNotNull(consumerRecord.value());
+        assertEquals(ORDER_ID, consumerRecord.value().orderId());
+        assertEquals(PaymentStatus.SUCCESS.name(), consumerRecord.value().status());
         consumer.close();
     }
 }

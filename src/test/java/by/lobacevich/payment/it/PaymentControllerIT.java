@@ -23,7 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
 
-public class PaymentControllerIT extends BaseIntegrationTest {
+class PaymentControllerIT extends BaseIntegrationTest {
 
     private static final BigDecimal AMOUNT1 = BigDecimal.valueOf(10.6);
     private static final BigDecimal AMOUNT2 = BigDecimal.valueOf(12.4);
