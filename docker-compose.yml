@@ -1,4 +1,20 @@
 services:
+  app:
+    build: .
+    container_name: payment-service
+    ports:
+      - "8084:8084"
+    depends_on:
+      mongodb:
+        condition: service_started
+      kafka:
+        condition: service_started
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATA_MONGODB_URI: mongodb://root:example@mongodb:27017/payments?authSource=admin
+      WEB_CLIENT_URL: https://www.random.org/integers/?num=1&min=1&max=100&col=1&base=10&format=plain&rnd=new
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+
   mongodb:
     image: mongo:latest
     container_name: mongodb

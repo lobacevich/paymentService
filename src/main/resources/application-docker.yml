@@ -1,0 +1,13 @@
+spring:
+  data:
+    mongodb:
+      uri: ${SPRING_DATA_MONGODB_URI}
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS}
+
+server:
+  port: 8084
+
+randomWebClient:
+  api:
+    url: ${WEB_CLIENT_URL}
