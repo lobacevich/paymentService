@@ -50,58 +50,57 @@ public class PaymentServiceImpl implements PaymentService {
                         .flatMap(repository::save)
                         .doOnSuccess(payment ->
                                 eventProducer.sendPaymentCreatedEvent(mapper.entityToEvent(payment, LocalDateTime.now()))))
-                        .map(mapper::entityToDto);
+                .map(mapper::entityToDto);
     }
 
     @Override
-    public Flux<PaymentDtoResponse> getAll(Long userId, Long orderId, PaymentStatus status) {
-
+    public Flux<PaymentDtoResponse> getAll(Long userId,
+                                           Long orderId,
+                                           PaymentStatus status) {
         return SecurityUtils.isAdmin()
                 .flatMapMany(isAdmin -> {
-                    List<Criteria> criteriaList = new ArrayList<>();
-                    if (orderId != null) {
-                        criteriaList.add(Criteria.where("orderId").is(orderId));
-                    }
-                    if (status != null) {
-                        criteriaList.add(Criteria.where("status").is(status));
-                    }
-                    Query query = new Query();
                     if (isAdmin) {
-                        if (userId != null) {
-                            criteriaList.add(Criteria.where("userId").is(userId));
-                        }
-                        if (!criteriaList.isEmpty()) {
-                            query.addCriteria(new Criteria().andOperator(criteriaList));
-                        }
-                        return mongoTemplate.find(query, Payment.class);
+                        return mongoTemplate.find(buildQuery(userId, orderId, status), Payment.class);
                     } else {
                         return SecurityUtils.getPrincipalId()
-                                .flatMapMany(principalId -> {
-                                    criteriaList.add(Criteria.where("userId").is(principalId));
-                                    query.addCriteria(new Criteria().andOperator(criteriaList));
-                                    return mongoTemplate.find(query, Payment.class);
-                                });
+                                .flatMapMany(principalId ->
+                                        mongoTemplate.find(buildQuery(principalId, orderId, status), Payment.class)
+                                );
                     }
                 })
                 .map(mapper::entityToDto);
+    }
+
+    private Query buildQuery(Long userId,
+                             Long orderId,
+                             PaymentStatus status) {
+        Query query = new Query();
+        List<Criteria> criteriaList = new ArrayList<>();
+        if (userId != null) {
+            criteriaList.add(Criteria.where("userId").is(userId));
+        }
+        if (orderId != null) {
+            criteriaList.add(Criteria.where("orderId").is(orderId));
+        }
+        if (status != null) {
+            criteriaList.add(Criteria.where("status").is(status));
+        }
+        if (!criteriaList.isEmpty()) {
+            query.addCriteria(new Criteria().andOperator(criteriaList));
+        }
+        return query;
     }
 
     @Override
     public Mono<BigDecimal> getSum(LocalDateTime from,
                                    LocalDateTime to) {
         return SecurityUtils.isAdmin()
-                .flatMap(isAdmin ->
-                {
-                    if (isAdmin) {
-                        return repository.sumByTimestampBetween(from, to)
-                                .map(TotalResult::total)
-                                .defaultIfEmpty(BigDecimal.ZERO);
-                    } else {
-                        return SecurityUtils.getPrincipalId()
-                                .flatMap(principalId -> repository.sumByUserIdAndTimestampBetween(principalId, from, to)
-                                        .map(TotalResult::total)
-                                        .defaultIfEmpty(BigDecimal.ZERO));
-                    }
-                });
+                .flatMap(isAdmin -> isAdmin
+                        ? repository.sumByTimestampBetween(from, to)
+                        : SecurityUtils.getPrincipalId()
+                        .flatMap(principalId -> repository.sumByUserIdAndTimestampBetween(principalId, from, to))
+                )
+                .map(TotalResult::total)
+                .defaultIfEmpty(BigDecimal.ZERO);
     }
 }
