@@ -15,6 +15,8 @@ import org.springframework.security.web.server.SecurityWebFilterChain;
 @EnableWebFluxSecurity
 public class SecurityConfig {
 
+    private static final String PERMIT_ALL = "/actuator/";
+
     private final AuthEntryPoint entryPoint;
     private final AuthFilter authFilter;
 
@@ -25,6 +27,7 @@ public class SecurityConfig {
                 .cors(ServerHttpSecurity.CorsSpec::disable)
                 .csrf(ServerHttpSecurity.CsrfSpec::disable)
                 .authorizeExchange(exchange -> exchange
+                        .pathMatchers(PERMIT_ALL).permitAll()
                         .anyExchange().authenticated())
                 .exceptionHandling(exception -> exception
                         .authenticationEntryPoint(entryPoint))
