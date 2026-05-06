@@ -15,7 +15,7 @@ import org.springframework.security.web.server.SecurityWebFilterChain;
 @EnableWebFluxSecurity
 public class SecurityConfig {
 
-    private static final String PERMIT_ALL = "/actuator/";
+    private static final String PERMIT_ALL = "/actuator/**";
 
     private final AuthEntryPoint entryPoint;
     private final AuthFilter authFilter;
