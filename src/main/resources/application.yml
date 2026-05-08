@@ -1,0 +1,29 @@
+spring:
+  application:
+    name: payment-service
+
+  data:
+    mongodb:
+      uri: mongodb://root:example@localhost:27017/payments?authSource=admin
+
+  kafka:
+    bootstrap-servers: localhost:9093
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      properties:
+        spring.json.add.type.headers: false
+
+  resilience4j:
+    circuitbreaker:
+      instances:
+        paymentService:
+          slidingWindowSize: 10
+          failureRateThreshold: 50
+          waitDurationInOpenState: 10s
+          permittedNumberOfCallsInHalfOpenState: 3
+
+randomWebClient.api.url: https://www.random.org/integers/?num=1&min=1&max=100&col=1&base=10&format=plain&rnd=new
+
+logging:
+  file.name: logs/log.log
