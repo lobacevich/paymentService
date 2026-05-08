@@ -14,6 +14,15 @@ spring:
       properties:
         spring.json.add.type.headers: false
 
+  resilience4j:
+    circuitbreaker:
+      instances:
+        paymentService:
+          slidingWindowSize: 10
+          failureRateThreshold: 50
+          waitDurationInOpenState: 10s
+          permittedNumberOfCallsInHalfOpenState: 3
+
 randomWebClient.api.url: https://www.random.org/integers/?num=1&min=1&max=100&col=1&base=10&format=plain&rnd=new
 
 logging:
